@@ -3,6 +3,7 @@
 
 This file is part of the Bpod Project
 Copyright (C) 2014 Joshua I. Sanders, Cold Spring Harbor Laboratory, NY, USA
+Edited by Yidi Chen 2015
 
 ----------------------------------------------------------------------------
 
@@ -124,7 +125,7 @@ unsigned long SessionStartTime = 0;
 
 void setup()   {
    for (int x = 0; x < 8; x++) {
-     pinMode(PortDigitalInputLines[x], INPUT_PULLUP);
+     pinMode(PortAnalogInputLines[x], INPUT_PULLUP);
      pinMode(PortPWMOutputLines[x], OUTPUT);
      analogWrite(PortPWMOutputLines[x], 0);
    }
@@ -184,7 +185,7 @@ void loop()
             ThirdByte = digitalRead(BncInputLines[SecondByte]);
           break;
           case 'P': // Read port digital input line
-            ThirdByte = digitalRead(PortDigitalInputLines[SecondByte]);
+            ThirdByte = digitalRead(PortAnalogInputLines[SecondByte]);
           break;
           case 'W': // Read wire digital input line
             ThirdByte = digitalRead(WireDigitalInputLines[SecondByte]);
@@ -302,7 +303,7 @@ void loop()
       // Read initial state of sensors      
       for (int x = 0; x < 8; x++) {
         if (PortInputsEnabled[x] == 1) { 
-          PortInputLineValue[x] = digitalRead(PortDigitalInputLines[x]); // Read each photogate's current state into an array
+          PortInputLineValue[x] = analoglogic(x); // Read each photogate's current state into an array
           if (PortInputLineValue[x] == HIGH) {PortInputLineLastKnownStatus[x] = HIGH;} else {PortInputLineLastKnownStatus[x] = LOW;} // Update last known state of input line
         } else {
           PortInputLineLastKnownStatus[x] = LOW; PortInputLineValue[x] = LOW;
@@ -391,7 +392,7 @@ void loop()
            // Refresh state of sensors and inputs
            for (int x = 0; x < 8; x++) {
              if (PortInputsEnabled[x] == 1) { 
-              PortInputLineValue[x] = digitalRead(PortDigitalInputLines[x]);
+              PortInputLineValue[x] = analoglogic(x);
              }
           }
           for (int x = 0; x < 2; x++) {
@@ -739,4 +740,12 @@ void manualOverrideOutputs() {
       Serial2.write(LowByte);
       break;
     }
+ }
+ 
+boolean analoglogic(int x){
+   if (analogRead(PortAnalogInputLines[x])<400) 
+         {return LOW;}
+   else
+         {return HIGH;}
+  
  }

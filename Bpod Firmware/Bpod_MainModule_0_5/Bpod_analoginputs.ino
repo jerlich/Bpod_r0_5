@@ -3,6 +3,7 @@
 
 This file is part of the Bpod Project
 Copyright (C) 2014 Joshua I. Sanders, Cold Spring Harbor Laboratory, NY, USA
+Edited by Yidi Chen 2015
 
 ----------------------------------------------------------------------------
 

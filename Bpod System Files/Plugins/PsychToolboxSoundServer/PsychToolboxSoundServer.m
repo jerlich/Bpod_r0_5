@@ -23,7 +23,7 @@ function PsychToolboxSoundServer(Function, varargin)
 % supposed to be). A modified version of this plugin for those systems is
 % available upon request. -JS 8/27/2014
 global BpodSystem
-SF = 192000; % Sound card sampling rate
+SF = 44100; % Sound card sampling rate
 nSlaves = 32;
 Function = lower(Function);
 switch Function
@@ -47,22 +47,18 @@ switch Function
             CandidateDevices = []; nCandidates = 0;
             if ispc
                 for x = 1:nDevices
-                    if strcmp(AudioDevices(x).HostAudioAPIName, 'ASIO')
-                        if AudioDevices(x).NrOutputChannels == 8
-                            nCandidates = nCandidates + 1;
-                            CandidateDevices(nCandidates) = AudioDevices(x).DeviceIndex;
-                        end
-                    end
+                  if AudioDevices(x).NrOutputChannels >= 2
+                    nCandidates = nCandidates + 1;
+                    CandidateDevices(nCandidates) = AudioDevices(x).DeviceIndex;
+                  end
                 end
             elseif ismac
             else
                 for x = 1:nDevices
                     DeviceName = AudioDevices(x).DeviceName;
-                    if ~isempty(strfind(DeviceName, 'Xonar DX: Multichannel')) || ~isempty(strfind(DeviceName, 'Xonar U7: USB Audio')) % Assumes ASUS Xonar DX or U7 Soundcard
-                        if AudioDevices(x).NrOutputChannels == 8
-                            nCandidates = nCandidates + 1;
-                            CandidateDevices(nCandidates) = AudioDevices(x).DeviceIndex;
-                        end
+                    if AudioDevices(x).NrOutputChannels >= 2
+                        nCandidates = nCandidates + 1;
+                        CandidateDevices(nCandidates) = AudioDevices(x).DeviceIndex;
                     end
                 end
             end
@@ -71,7 +67,12 @@ switch Function
                 for x = 1:nCandidates
                     disp(['Candidate device found! Trying candidate ' num2str(x) ' of ' num2str(nCandidates)])
                     try
-                        CandidateDevice = PsychPortAudio('Open', CandidateDevices(x), 9, 4, SF, 6 , 32);
+		        % 9 refers to sound playback + define as master defice
+		        % 4 - reqlatency - Super freaking aggressive
+                        % SF - frequency
+			% 2 (was 6) - number of channels
+			% 32 - buffer size
+                        CandidateDevice = PsychPortAudio('Open', CandidateDevices(x), 9, 4, SF, 2 , 32);
                         BpodSystem.SystemSettings.SoundDeviceID = CandidateDevices(x);
                         SaveBpodSystemSettings;
                         PsychPortAudio('Close', CandidateDevice);
@@ -83,7 +84,7 @@ switch Function
             else
                 disp('Error: no compatible sound subsystem detected. On Windows, ensure ASIO drivers are installed.')
             end
-            BpodSystem.PluginObjects.SoundServer.MasterOutput = PsychPortAudio('Open', BpodSystem.SystemSettings.SoundDeviceID, 9, 4, SF, 6 , 32);
+            BpodSystem.PluginObjects.SoundServer.MasterOutput = PsychPortAudio('Open', BpodSystem.SystemSettings.SoundDeviceID, 9, 4, SF, 2 , 32);
             PsychPortAudio('Start', BpodSystem.PluginObjects.SoundServer.MasterOutput, 0, 0, 1);
             for x = 1:nSlaves
                 BpodSystem.PluginObjects.SoundServer.SlaveOutput(x) = PsychPortAudio('OpenSlave', BpodSystem.PluginObjects.SoundServer.MasterOutput);

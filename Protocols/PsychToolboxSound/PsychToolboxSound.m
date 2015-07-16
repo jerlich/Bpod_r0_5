@@ -62,7 +62,7 @@ BpodNotebook('init');
 TotalRewardDisplay('init');
 
 %% Define stimuli and send to sound server
-SF = 192000; % Sound card sampling rate
+SF = 44100; % Sound card sampling rate
 LeftSound = GenerateSineWave(SF, S.GUI.SinWaveFreqLeft, S.GUI.SoundDuration); % Sampling freq (hz), Sine frequency (hz), duration (s)
 RightSound = GenerateSineWave(SF, S.GUI.SinWaveFreqRight, S.GUI.SoundDuration); % Sampling freq (hz), Sine frequency (hz), duration (s)
 PunishSound = (rand(1,SF*.5)*2) - 1;

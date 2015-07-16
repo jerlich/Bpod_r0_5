@@ -24,8 +24,10 @@ function PsychToolboxSoundServer(Function, varargin)
 % available upon request. -JS 8/27/2014
 global BpodSystem
 SF = 44100; % Sound card sampling rate
+outhertz = 44100;
 nSlaves = 32;
 Function = lower(Function);
+numchannels = 2;
 switch Function
     case 'init'
         if BpodSystem.EmulatorMode == 0
@@ -56,7 +58,7 @@ switch Function
             else
                 for x = 1:nDevices
                     DeviceName = AudioDevices(x).DeviceName;
-                    if AudioDevices(x).NrOutputChannels >= 2
+                    if AudioDevices(x).NrOutputChannels >= numchannels
                         nCandidates = nCandidates + 1;
                         CandidateDevices(nCandidates) = AudioDevices(x).DeviceIndex;
                     end
@@ -72,7 +74,7 @@ switch Function
                         % SF - frequency
 			% 2 (was 6) - number of channels
 			% 32 - buffer size
-                        CandidateDevice = PsychPortAudio('Open', CandidateDevices(x), 9, 4, SF, 2 , 32);
+                        CandidateDevice = PsychPortAudio('Open', CandidateDevices(x), 9, 4, SF, numchannels , 32);
                         BpodSystem.SystemSettings.SoundDeviceID = CandidateDevices(x);
                         SaveBpodSystemSettings;
                         PsychPortAudio('Close', CandidateDevice);
@@ -82,14 +84,14 @@ switch Function
                     end
                 end
             else
-                disp('Error: no compatible sound subsystem detected. On Windows, ensure ASIO drivers are installed.')
+                disp('FUCK DAMN Error: no compatible sound subsystem detected. On Windows, ensure ASIO drivers are installed.')
             end
-            BpodSystem.PluginObjects.SoundServer.MasterOutput = PsychPortAudio('Open', BpodSystem.SystemSettings.SoundDeviceID, 9, 4, SF, 2 , 32);
+            BpodSystem.PluginObjects.SoundServer.MasterOutput = PsychPortAudio('Open', BpodSystem.SystemSettings.SoundDeviceID, 9, 4, SF, numchannels, 32);
             PsychPortAudio('Start', BpodSystem.PluginObjects.SoundServer.MasterOutput, 0, 0, 1);
             for x = 1:nSlaves
                 BpodSystem.PluginObjects.SoundServer.SlaveOutput(x) = PsychPortAudio('OpenSlave', BpodSystem.PluginObjects.SoundServer.MasterOutput);
             end
-            Data = zeros(6,192);
+            Data = zeros(numchannels,192);
             PsychPortAudio('FillBuffer', BpodSystem.PluginObjects.SoundServer.SlaveOutput(1), Data);
             PsychPortAudio('Start', BpodSystem.PluginObjects.SoundServer.SlaveOutput(1));
             disp('PsychToolbox sound server successfully initialized.')
@@ -105,7 +107,7 @@ switch Function
             BpodSystem.PluginObjects.SoundServer.Sounds = cell(1,32);
             BpodSystem.PluginObjects.SoundServer.Enabled = 1;
             try
-                sound(zeros(1,10), 48000);
+                sound(zeros(1,10), outhertz);
                 disp('Emulator sound server successfully initialized.')
             catch
                 BpodSystem.PluginObjects.SoundServer.Enabled = 0;
@@ -131,8 +133,8 @@ switch Function
             if Siz(1) == 1 % If mono, send the same signal on both channels
                 Data(2,:) = Data;
             end
-            Data(3:6,:) = zeros(4,Siz(2));
-            Data(3:6,1:(SF/1000)) = ones(4,(SF/1000));
+            % Data(3:6,:) = zeros(numchannels,Siz(2));
+            % Data(3:6,1:(SF/1000)) = ones(numchannels,(SF/1000));
             PsychPortAudio('FillBuffer', BpodSystem.PluginObjects.SoundServer.SlaveOutput(SlaveID), Data);
         else
             if Siz(1) == 1 % If mono, send the same signal on both channels
@@ -140,24 +142,24 @@ switch Function
                 if R > 0
                     Data = Data(1:length(Data)-R);
                 end
-                Data = mean(reshape(Data, 4, length(Data)/4)); % Down-sample 192kHz to 48kHz (only once for mono)
+                %% Data = mean(reshape(Data, 4, length(Data)/4)); % Down-sample 192kHz to 48kHz (only once for mono)
                 Data(2,:) = Data;
             else
-                R = rem(length(Data(1,:)), 4); % Trim for down-sampling
-                if R > 0
-                    Data1 = Data(1,1:length(Data(1,:))-R);
-                else
-                    Data1 = Data(1,:);
-                end
-                R = rem(length(Data(2,:)), 4); % Trim for down-sampling
-                if R > 0
-                    Data2 = Data(2,1:length(Data(2,:))-R);
-                else
-                    Data2 = Data(2,:);
-                end
-                Data = zeros(1,length(Data1)/4);
-                Data(1,:) = mean(reshape(Data1, 4, length(Data1)/4)); % Down-sample 192kHz to 48kHz
-                Data(2,:) = mean(reshape(Data2, 4, length(Data2)/4)); % Down-sample 192kHz to 48kHz
+                %% R = rem(length(Data(1,:)), 4); % Trim for down-sampling
+                %% if R > 0
+                %%     Data1 = Data(1,1:length(Data(1,:))-R);
+                %% else
+                %%     Data1 = Data(1,:);
+                %% end
+                %% R = rem(length(Data(2,:)), 4); % Trim for down-sampling
+                %% if R > 0
+                %%     Data2 = Data(2,1:length(Data(2,:))-R);
+                %% else
+                %%     Data2 = Data(2,:);
+                %% end
+                %% Data = zeros(1,length(Data1)/4);
+                %% Data(1,:) = mean(reshape(Data1, 4, length(Data1)/4)); % Down-sample 192kHz to 48kHz
+                %% Data(2,:) = mean(reshape(Data2, 4, length(Data2)/4)); % Down-sample 192kHz to 48kHz
             end
             BpodSystem.PluginObjects.SoundServer.Sounds{SlaveID} = Data;
         end
@@ -167,7 +169,7 @@ switch Function
             if BpodSystem.EmulatorMode == 0
                 PsychPortAudio('Start', BpodSystem.PluginObjects.SoundServer.SlaveOutput(SlaveID));
             else
-                sound(BpodSystem.PluginObjects.SoundServer.Sounds{SlaveID}, 48000);
+                sound(BpodSystem.PluginObjects.SoundServer.Sounds{SlaveID}, outhertz);
             end
         else
             error(['The psychtoolbox sound server currently supports only ' num2str(nSlaves) ' sounds.'])

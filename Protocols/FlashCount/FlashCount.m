@@ -21,7 +21,7 @@ BpodParameterGUI('init', S);
 %% Define trials
 nTrials = 50;
 rightTrial = rand(nTrials,1)<0.5;
-trialDur = rand(nTrials,1)*8+2;
+trialDur = rand(nTrials,1)*6+2;
 deltaF = nan(nTrials,1);
 sumF = deltaF;
 
@@ -54,15 +54,14 @@ for currentTrial = 1:nTrials
     sma = AddState(sma,'Name','preflash', ...
             'Timer', rand*0.15+0.150, ...
             'StateChangeConditions',{'Tup', 'flash00_on', 'Port2Out' ,'violationstate'},...
-            'OutputActions',{'PWM2',255}
-            )
+            'OutputActions',{'PWM2',255});
 
     dur = 0;
     ind = 0;
-   
+    
 
     while dur<trialDur(currentTrial)
-        IFI = rand*0.15+0.1;
+        IFI = rand*0.45+0.1;
         thisR = rand<rProb;
         thisL = rand<lProb;
 
@@ -81,72 +80,66 @@ for currentTrial = 1:nTrials
             output = {};
         end
        
-        sma = AddState(sma,'Name',sprintf('flash%2d_on',ind), ...
+        sma = AddState(sma,'Name',sprintf('flash%02d_on',ind), ...
                 'Timer', 0.05, ...
-                'StateChangeConditions',{'Tup', sprintf('flash%2d_off',ind), 'Port2Out' ,'violationstate'},...
-                'OutputActions', output
-                )
-
-        sma = AddState(sma,'Name',sprintf('flash%2d_off',ind), ...
+                'StateChangeConditions',{'Tup', sprintf('flash%02d_off',ind), 'Port2Out' ,'violationstate'},...
+                'OutputActions', output);
+        sma = AddState(sma,'Name',sprintf('flash%02d_off',ind), ...
                 'Timer', IFI, ...
-                'StateChangeConditions',{'Tup', sprintf('flash%2d_on',ind+1), 'Port2Out' ,'violationstate'},...
-                'OutputActions', {'PWM2',200}
-                )
-
+                'StateChangeConditions',{'Tup', sprintf('flash%02d_on',ind+1), 'Port2Out' ,'violationstate'},...
+                'OutputActions', {'PWM2',200});
             
             
-        ind = ind+1
+        ind = ind+1;
         dur = dur + IFI + 0.05;
-        deltaF(currentTrial) = numel(rightflashes) - numel(leftflashes)
-        sumF(currentTrial) = numel(rightflashes) + numel(leftflashes)
-
+    
     end
+    deltaF(currentTrial) = numel(rightflashes) - numel(leftflashes);
+    sumF(currentTrial) = numel(rightflashes) + numel(leftflashes);
 
 
-    sma = AddState(sma,'Name',sprintf('flash%2d_on',ind), ...
+    sma = AddState(sma,'Name',sprintf('flash%02d_on',ind), ...
                 'Timer', 0.05, ...
                 'StateChangeConditions',{'Tup', 'wait_for_spoke'},...
-                'OutputActions', {}}
-                )
+                'OutputActions', {});
 
     if deltaF>0
-        hitPoke = 'Port3In'
-        missPoke = 'Port1In'
+        hitPoke = 'Port3In';
+        missPoke = 'Port1In';
     elseif deltaF<0
-        hitPoke = 'Port1In'
-        missPoke = 'Port3In'
+        hitPoke = 'Port1In';
+        missPoke = 'Port3In';
     else
         if rand<0.5
-            hitPoke = 'Port1In'
-            missPoke = 'Port3In'
+            hitPoke = 'Port1In';
+            missPoke = 'Port3In';
         else
-            hitPoke = 'Port3In'
-            missPoke = 'Port1In'
+            hitPoke = 'Port3In';
+            missPoke = 'Port1In';
         end
     end
 
 
-    sma = AddState(sma,'Name','wait_for_spoke'), ...
+    sma = AddState(sma,'Name','wait_for_spoke', ...
                 'Timer', 0, ...
                 'StateChangeConditions',{hitPoke, 'reward_state',missPoke,'error_state'},...
-                'OutputActions', {'PWM1',100,'PWM3',100}}
-                )
+                'OutputActions', {'PWM1',100,'PWM3',100});
 
-    sma = AddState(sma, 'Name', 'hit_state', ...
+    sma = AddState(sma, 'Name', 'reward_state', ...
         'Timer', 1,...
         'StateChangeConditions', {'Tup', 'ITI'},...
-        'OutputActions', {'PWM4','255'});
+        'OutputActions', {'PWM4',255});
 
 
     sma = AddState(sma, 'Name', 'error_state', ...
         'Timer', 1.5,...
         'StateChangeConditions', {'Tup', 'ITI'},...
-        'OutputActions', {'PWM5','255'});
+        'OutputActions', {'PWM5',255});
     
     sma = AddState(sma, 'Name', 'violationstate', ...
         'Timer', 3,...
         'StateChangeConditions', {'Tup', 'ITI'},...
-        'OutputActions', {'PWM5','188'});
+        'OutputActions', {'PWM5',188});
     sma = AddState(sma, 'Name', 'ITI', ...
         'Timer', 4,...
         'StateChangeConditions', {'Tup', 'exit'},...
@@ -155,6 +148,7 @@ for currentTrial = 1:nTrials
 
     SendStateMatrix(sma);
     RawEvents = RunStateMatrix;
+%{
     if ~isempty(fieldnames(RawEvents)) % If trial data was returned
         BpodSystem.Data = AddTrialEvents(BpodSystem.Data,RawEvents); % Computes trial events from raw data
         BpodSystem.Data = BpodNotebook('sync', BpodSystem.Data); % Sync with Bpod notebook plugin
@@ -163,7 +157,8 @@ for currentTrial = 1:nTrials
         UpdateOutcomePlot(TrialTypes, BpodSystem.Data);
         SaveBpodSessionData; % Saves the field BpodSystem.Data to the current data file
     end
-    HandlePauseCondition; % Checks to see if the protocol is paused. If so, waits until user resumes.
+%}    
+HandlePauseCondition; % Checks to see if the protocol is paused. If so, waits until user resumes.
     if BpodSystem.BeingUsed == 0
         return
     end

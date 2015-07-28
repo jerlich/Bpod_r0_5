@@ -386,32 +386,8 @@ void loop()
             case 'X':   // Exit state matrix and return data
               MatrixFinished = true;
               setStateOutputs(0); // Returns all lines to low by forcing final state
-              SerialUSB.write(3);
-              SerialUSB.write(111);
               
-              for (int x = 0; x < 7; x++) {
-                 switch(faultMatch(x))
-                    {//case 1:
-                    //Serial.println( "nothing in");
-                    //break;
-                    case 2:
-                    SerialUSB.write(3);
-                    SerialUSB.write(x);
-                    
-                    //digitalWrite(33, HIGH);
-                    //delay(1000);
-                    //
-                    break;
-                    case 3:
-                    
-                    SerialUSB.write(3);
-                    SerialUSB.write(x);
-                    break;
-                    //case 4:
-                    //Serial.println( " In");
-                    //break;
-                    }
-                }   // end for faultmatch(x)     
+                   
               
               
               break; // end case X
@@ -557,8 +533,30 @@ void loop()
           if (NewState != CurrentState) {
              if (NewState == nStates) {
                 MatrixFinished = true;
-                SerialUSB.write(3);
-                SerialUSB.write(111);
+                
+              for (int x = 0; x < 7; x++) {
+                 switch(faultMatch(x))
+                    {//case 1:
+                    //Serial.println( "nothing in");
+                    //break;
+                    case 2:
+                    SerialUSB.write(3);
+                    SerialUSB.write(x);
+                    
+                    //digitalWrite(33, HIGH);
+                    //delay(1000);
+                    //
+                    break;
+                    case 3:
+                    
+                    SerialUSB.write(3);
+                    SerialUSB.write(x);
+                    break;
+                    //case 4:
+                    //Serial.println( " In");
+                    //break;
+                    }
+                }   // end for faultmatch(x)
              } else {
                 setStateOutputs(NewState);
                 StateStartTime = CurrentTime;

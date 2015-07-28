@@ -18,10 +18,13 @@ end
 % Initialize parameter GUI plugin
 BpodParameterGUI('init', S);
 
+CPWR = 100;
+flashtime = 0.025;
+
 %% Define trials
 nTrials = 50;
 rightTrial = rand(nTrials,1)<0.5;
-trialDur = rand(nTrials,1)*6+2;
+trialDur = rand(nTrials,1)*5+1;
 deltaF = nan(nTrials,1);
 sumF = deltaF;
 
@@ -36,8 +39,8 @@ for currentTrial = 1:nTrials
     leftflashes = [];
     rightflashes = [];
     if rightTrial(currentTrial) == 1
-        rProb = 0.7;
-        lProb = 0.3;
+        rProb = 0.9;
+        lProb = 0.1;
     else
         rProb = 0.3;
         lProb = 0.7;
@@ -50,48 +53,48 @@ for currentTrial = 1:nTrials
     sma = AddState(sma, 'Name', 'WaitForPoke1', ...
         'Timer', 0,...
         'StateChangeConditions', {'Port2In', 'preflash', 'Port3In', 'violationstate','Port1In', 'violationstate',},...
-        'OutputActions', {'PWM2',150}); 
+        'OutputActions', {'PWM2',50}); 
     sma = AddState(sma,'Name','preflash', ...
             'Timer', rand*0.15+0.150, ...
             'StateChangeConditions',{'Tup', 'flash00_on', 'Port2Out' ,'violationstate'},...
-            'OutputActions',{'PWM2',255});
+            'OutputActions',{'PWM2',CPWR});
 
     dur = 0;
     ind = 0;
     
 
     while dur<trialDur(currentTrial)
-        IFI = rand*0.45+0.1;
+        IFI = rand*0.35+0.05;
         thisR = rand<rProb;
         thisL = rand<lProb;
 
         if thisR && thisL
             leftflashes = [leftflashes dur];
             rightflashes = [rightflashes dur];
-            output = {'PWM1',255,'PWM3',255,'PWM2',200};
+            output = {'PWM1',255,'PWM3',255,'PWM2',CPWR};
         elseif thisR
             rightflashes = [rightflashes dur];
-            output = {'PWM3',255,'PWM2',200};
+            output = {'PWM3',255,'PWM2',CPWR};
             
         elseif thisL
             leftflashes = [leftflashes dur];
-            output = {'PWM1',255,'PWM2',200};
+            output = {'PWM1',255,'PWM2',CPWR};
         else
             output = {};
         end
        
         sma = AddState(sma,'Name',sprintf('flash%02d_on',ind), ...
-                'Timer', 0.05, ...
+                'Timer', flashtime, ...
                 'StateChangeConditions',{'Tup', sprintf('flash%02d_off',ind), 'Port2Out' ,'violationstate'},...
                 'OutputActions', output);
         sma = AddState(sma,'Name',sprintf('flash%02d_off',ind), ...
                 'Timer', IFI, ...
                 'StateChangeConditions',{'Tup', sprintf('flash%02d_on',ind+1), 'Port2Out' ,'violationstate'},...
-                'OutputActions', {'PWM2',200});
+                'OutputActions', {'PWM2',CPWR});
             
             
         ind = ind+1;
-        dur = dur + IFI + 0.05;
+        dur = dur + IFI + flashtime;
     
     end
     deltaF(currentTrial) = numel(rightflashes) - numel(leftflashes);
@@ -99,14 +102,14 @@ for currentTrial = 1:nTrials
 
 
     sma = AddState(sma,'Name',sprintf('flash%02d_on',ind), ...
-                'Timer', 0.05, ...
+                'Timer', flashtime, ...
                 'StateChangeConditions',{'Tup', 'wait_for_spoke'},...
                 'OutputActions', {});
 
-    if deltaF>0
+    if deltaF(currentTrial)>0
         hitPoke = 'Port3In';
         missPoke = 'Port1In';
-    elseif deltaF<0
+    elseif deltaF(currentTrial)<0
         hitPoke = 'Port1In';
         missPoke = 'Port3In';
     else
@@ -128,20 +131,39 @@ for currentTrial = 1:nTrials
     sma = AddState(sma, 'Name', 'reward_state', ...
         'Timer', 1,...
         'StateChangeConditions', {'Tup', 'ITI'},...
-        'OutputActions', {'PWM4',255});
+        'OutputActions', {'PWM5',255});
 
 
     sma = AddState(sma, 'Name', 'error_state', ...
         'Timer', 1.5,...
         'StateChangeConditions', {'Tup', 'ITI'},...
-        'OutputActions', {'PWM5',255});
+        'OutputActions', {'PWM4',255});
     
     sma = AddState(sma, 'Name', 'violationstate', ...
-        'Timer', 3,...
-        'StateChangeConditions', {'Tup', 'ITI'},...
-        'OutputActions', {'PWM5',188});
+        'Timer', 0.25,...
+        'StateChangeConditions', {'Tup', 'v1'},...
+        'OutputActions', {'PWM4',188});
+    
+    for vx=2:12
+        sma = AddState(sma, 'Name', sprintf('v%d',vx-1), ...
+        'Timer', 0.25,...
+        'StateChangeConditions', {'Tup', sprintf('v%do',vx-1)},...
+        'OutputActions', {});
+    
+      sma = AddState(sma, 'Name', sprintf('v%do',vx-1), ...
+        'Timer', 0.25,...
+        'StateChangeConditions', {'Tup', sprintf('v%d',vx)},...
+        'OutputActions', {'PWM4',188});
+    end
+    
+        sma = AddState(sma, 'Name', 'v12', ...
+        'Timer', 0.01,...
+        'StateChangeConditions', {'Tup','ITI'},...
+        'OutputActions', {});
+    
+    
     sma = AddState(sma, 'Name', 'ITI', ...
-        'Timer', 4,...
+        'Timer', rand*4,...
         'StateChangeConditions', {'Tup', 'exit'},...
         'OutputActions', {});
 

@@ -44,7 +44,8 @@ switch Function
                 InitializePsychSound(1);
             end
             PsychPortAudio('Close');
-	    if nargin > 0
+	    if nargin > 1
+	      disp(['Nargin is ' num2str(nargin)])
 	      CandidateDevices = [varargin{1}];
 	      nCandidates = 1;
 	    else

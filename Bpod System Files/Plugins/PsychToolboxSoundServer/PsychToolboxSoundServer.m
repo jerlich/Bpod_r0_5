@@ -25,7 +25,7 @@ function PsychToolboxSoundServer(Function, varargin)
 global BpodSystem
 SF = 44100; % Sound card sampling rate
 outhertz = 44100;
-nSlaves = 32;
+nSlaves = 32; % 32 Slaves?
 Function = lower(Function);
 numchannels = 2;
 switch Function
@@ -44,41 +44,47 @@ switch Function
                 InitializePsychSound(1);
             end
             PsychPortAudio('Close');
-            AudioDevices = PsychPortAudio('GetDevices');
-            nDevices = length(AudioDevices);
-            CandidateDevices = []; nCandidates = 0;
-            if ispc
+	    if nargin > 0
+	      CandidateDevices = [varargin{1}];
+	      nCandidates = 1;
+	    else
+              AudioDevices = PsychPortAudio('GetDevices');
+              nDevices = length(AudioDevices);
+              CandidateDevices = []; nCandidates = 0;
+              if ispc
                 for x = 1:nDevices
                   if AudioDevices(x).NrOutputChannels >= 2
                     nCandidates = nCandidates + 1;
                     CandidateDevices(nCandidates) = AudioDevices(x).DeviceIndex;
                   end
                 end
-            elseif ismac
-            else
+              elseif ismac
+              else
                 for x = 1:nDevices
-                    DeviceName = AudioDevices(x).DeviceName;
-                    if AudioDevices(x).NrOutputChannels >= numchannels
-                        nCandidates = nCandidates + 1;
-                        CandidateDevices(nCandidates) = AudioDevices(x).DeviceIndex;
-                    end
+                  DeviceName = AudioDevices(x).DeviceName;
+                  if AudioDevices(x).NrOutputChannels >= numchannels
+                    nCandidates = nCandidates + 1;
+                    CandidateDevices(nCandidates) = AudioDevices(x).DeviceIndex;
+                  end
                 end
+              end
             end
-            
             if nCandidates > 0
                 for x = 1:nCandidates
-                    disp(['Candidate device found! Trying candidate ' num2str(x) ' of ' num2str(nCandidates)])
+                    disp(['Hey, a sound card. Trying candidate ' num2str(x) ' of ' num2str(nCandidates)])
                     try
 		        % 9 refers to sound playback + define as master defice
 		        % 4 - reqlatency - Super freaking aggressive
                         % SF - frequency
 			% 2 (was 6) - number of channels
 			% 32 - buffer size
-                        CandidateDevice = PsychPortAudio('Open', CandidateDevices(x), 9, 4, SF, numchannels , 32);
+                        % CandidateDevice = PsychPortAudio('Open', CandidateDevices(x), 9, 4, SF, numchannels , 32);
+		        CandidateDevice = PsychPortAudio('Open', CandidateDevices(x), 9, 2, SF, 2, 32);
                         BpodSystem.SystemSettings.SoundDeviceID = CandidateDevices(x);
                         SaveBpodSystemSettings;
                         PsychPortAudio('Close', CandidateDevice);
-                        disp('Success! A compatible sound card was detected and stored in Bpod settings.')
+                        disp('Oh, hey. I guess it worked.')
+			break; % Break out of the loop
                     catch
                         
                     end
@@ -86,7 +92,8 @@ switch Function
             else
                 disp('FUCK DAMN Error: no compatible sound subsystem detected. On Windows, ensure ASIO drivers are installed.')
             end
-            BpodSystem.PluginObjects.SoundServer.MasterOutput = PsychPortAudio('Open', BpodSystem.SystemSettings.SoundDeviceID, 9, 4, SF, numchannels, 32);
+            % BpodSystem.PluginObjects.SoundServer.MasterOutput = PsychPortAudio('Open', BpodSystem.SystemSettings.SoundDeviceID, 9, 4, SF, numchannels, 32);
+	    BpodSystem.PluginObjects.SoundServer.MasterOutput = PsychPortAudio('Open', CandidateDevices(x), 9, 2, SF, 2, 32);
             PsychPortAudio('Start', BpodSystem.PluginObjects.SoundServer.MasterOutput, 0, 0, 1);
             for x = 1:nSlaves
                 BpodSystem.PluginObjects.SoundServer.SlaveOutput(x) = PsychPortAudio('OpenSlave', BpodSystem.PluginObjects.SoundServer.MasterOutput);

@@ -16,14 +16,14 @@ if isempty(fieldnames(S))  % If settings file was an empty struct, populate stru
 end
 
 
-CPWR = 100;
-FPWR = 150;
-flashtime = 0.01;
+CPWR = 35;
+FPWR = 15;
+flashtime = 0.005;
 
 %% Define trials
-nTrials = 10;
+nTrials = 25;
 rightTrial = rand(nTrials,1)<0.5;
-trialDur = rand(nTrials,1)*5+1;
+trialDur = rand(nTrials,1)*4+.3;
 deltaF = nan(nTrials,1);
 sumF = deltaF;
 hits = deltaF;
@@ -34,11 +34,11 @@ BpodSystem.Data.TrialTypes = []; % The trial type of each trial completed will b
 %% Initialize sound
 
 PsychToolboxSoundServer('init')
-SF = 44100; % Sound card sampling rate
-PsychToolboxSoundServer('setSF',SF)
-GoSound = GenerateSineWave(SF, 800, 1);
-HitSound = GenerateSineWave(SF, 4, 1) .* GenerateSineWave(SF, 400, 1); % When they make it
-MissSound = GeneratePoissonClicks(SF, 100, 1);
+SF = PsychToolboxSoundServer('getSF');
+GoSound = GenerateSineWave(SF, 800, .05);
+HitSound = GenerateSineWave(SF, 4, .5) .* GenerateSineWave(SF, 2000, .5); % When they make it
+MissSound = GenerateSineWave(SF, 8, .5) ;
+MissSound = MissSound(2:end) .* ((rand(1,SF*.5)*2) - 1);
 %MissSound = square((0:(1/SF):1)*2*pi*600); % When they miss
 ViolationSound = (rand(1,SF*.5)*2) - 1;
 
@@ -58,16 +58,16 @@ nGood = 0;
 while nGood < nTrials
     currentTrial = currentTrial + 1;
     
-    S = BpodParameterGUI('sync', S); % Sync parameters with BpodParameterGUI plugin
+%    S = BpodParameterGUI('sync', S); % Sync parameters with BpodParameterGUI plugin
     % Update reward amounts
     leftflashes = [];
     rightflashes = [];
-    if rightTrial(currentTrial)
-        rProb = 0.6;
+    if rightTrial(nGood+1)
+        rProb = 0.4;
         lProb = 0.4;
     else
         rProb = 0.4;
-        lProb = 0.6;
+        lProb = 0.4;
     end
     
     
@@ -87,28 +87,28 @@ while nGood < nTrials
     ind = 0;
     
     
-    while dur<trialDur(currentTrial)
-        IFI = rand*0.35+0.05;
+    while dur<trialDur(nGood+1)
+        IFI = exprnd(.1);
         thisR = rand<rProb;
         thisL = rand<lProb;
         
         if thisR && thisL
             leftflashes = [leftflashes dur];
             rightflashes = [rightflashes dur];
-            output = {'PWM1',FPWR,'PWM3',FPWR,'PWM2',CPWR};
+            output = {'PWM1',FPWR+rand*30,'PWM3',FPWR+rand*30,'PWM2',CPWR};
         elseif thisR
             rightflashes = [rightflashes dur];
-            output = {'PWM3',FPWR,'PWM2',CPWR};
+            output = {'PWM3',FPWR+rand*30,'PWM2',CPWR};
             
         elseif thisL
             leftflashes = [leftflashes dur];
-            output = {'PWM1',FPWR,'PWM2',CPWR};
+            output = {'PWM1',FPWR+rand*30,'PWM2',CPWR};
         else
             output = {'PWM2',CPWR};
         end
         
         sma = AddState(sma,'Name',sprintf('flash%02d_on',ind), ...
-            'Timer', flashtime, ...
+            'Timer', flashtime+rand*0.01, ...
             'StateChangeConditions',{'Tup', sprintf('flash%02d_off',ind), 'Port2Out' ,'violationstate'},...
             'OutputActions', output);
         sma = AddState(sma,'Name',sprintf('flash%02d_off',ind), ...
@@ -206,8 +206,8 @@ while nGood < nTrials
         BpodSystem.Data = AddTrialEvents(BpodSystem.Data,RawEvents); % Computes trial events from raw data
         %        BpodSystem.Data.TrialTypes(currentTrial) = TrialTypes(currentTrial); % Adds the trial type of the current trial to data
         %        SaveBpodSessionData; % Saves the field BpodSystem.Data to the current data file
-        peh(currentTrial).states = BpodSystem.Data.RawEvents.Trial{1}.States;
-        peh(currentTrial).events = BpodSystem.Data.RawEvents.Trial{1}.Events;
+        peh(currentTrial).states = BpodSystem.Data.RawEvents.Trial{currentTrial}.States;
+        peh(currentTrial).events = BpodSystem.Data.RawEvents.Trial{currentTrial}.Events;
         
         tS = peh(currentTrial).states;
         
@@ -242,7 +242,8 @@ wr(deltaF>0) = hits(deltaF>0);
 wr(deltaF<0) = 1-hits(deltaF<0);
 
 [bx,by,be] = binned(deltaF, wr);
-errorplot(bx,by,be)
+%errorplot(bx,by,be)
+plot(bx,by,'ko-')
 
 
  keyboard

@@ -25,18 +25,15 @@ function y=PsychToolboxSoundServer(Function, varargin)
 global BpodSystem
 persistent SF;
 if isempty(SF)
-    SF = 44100; % Sound card sampling rate
+    SF = 192000; % Sound card sampling rate
 end
 nSlaves = 32;
 Function = lower(Function);
 switch Function
-    case 'getSF'
-        y = SF;
-        return
-    case 'setSF'
-        SF = varargin{1};
-        return
-        
+    case 'getsf'
+        y = SF;       
+    case 'setsf'
+        SF = varargin{1};      
     case 'init'
         if BpodSystem.EmulatorMode == 0
             if ~isfield(BpodSystem.SystemSettings, 'SoundDeviceID')

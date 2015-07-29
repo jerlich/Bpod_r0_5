@@ -30,6 +30,26 @@ sumF = deltaF;
 
 BpodSystem.Data.TrialTypes = []; % The trial type of each trial completed will be added here.
 
+%% Initialize sound
+
+PsychToolboxSoundServer('init')
+
+SF = 192000; % Sound card sampling rate
+SF = 44100; % Sound card sampling rate
+GoSound = GenerateSineWave(SF, 800, 1)
+HitSound = GenerateSineWave(SF, 4, 1) .* GenerateSineWave(SF, 400, 1); % When they make it
+MissSound = GeneratePoissonClicks(SF, 100, 1);
+%MissSound = square((0:(1/SF):1)*2*pi*600); % When they miss
+ViolationSound = (rand(1,SF*.5)*2) - 1;
+
+PsychToolboxSoundServer('Load', 1, GoSound);
+PsychToolboxSoundServer('Load', 2, HitSound);
+PsychToolboxSoundServer('Load', 3, MissSound);
+PsychToolboxSoundServer('Load', 4, ViolationSound);
+
+% Set soft code handler to trigger sounds
+BpodSystem.SoftCodeHandlerFunction = 'SoftCodeHandler_PlaySound';
+
 %% Initialize plots
 
 %% Main trial loop
@@ -126,23 +146,28 @@ for currentTrial = 1:nTrials
     sma = AddState(sma,'Name','wait_for_spoke', ...
                 'Timer', 0, ...
                 'StateChangeConditions',{hitPoke, 'reward_state',missPoke,'error_state'},...
-                'OutputActions', {'PWM1',100,'PWM3',100});
+                'OutputActions', {'PWM1',100,'PWM3',100, 'SoftCode', 1});
 
     sma = AddState(sma, 'Name', 'reward_state', ...
         'Timer', 1,...
         'StateChangeConditions', {'Tup', 'ITI'},...
-        'OutputActions', {'PWM5',255});
+        'OutputActions', {'PWM5',255, 'SoftCode', 2});
 
 
     sma = AddState(sma, 'Name', 'error_state', ...
         'Timer', 1.5,...
         'StateChangeConditions', {'Tup', 'ITI'},...
-        'OutputActions', {'PWM4',255});
-    
+        'OutputActions', {'PWM4',255, 'SoftCode', 3});
+
     sma = AddState(sma, 'Name', 'violationstate', ...
+        'Timer', 0,...
+        'StateChangeConditions', {'Tup', 'violationPunish'},...
+        'OutputActions', {'SoftCode', 255});
+
+    sma = AddState(sma, 'Name', 'violationPunish', ...
         'Timer', 0.25,...
         'StateChangeConditions', {'Tup', 'v1'},...
-        'OutputActions', {'PWM4',188});
+        'OutputActions', {'PWM4',188, 'SoftCode', 4});
     
     for vx=2:12
         sma = AddState(sma, 'Name', sprintf('v%d',vx-1), ...

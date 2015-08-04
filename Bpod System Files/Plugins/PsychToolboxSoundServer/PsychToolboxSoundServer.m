@@ -3,7 +3,7 @@
 
 This file is part of the Bpod Project
 Copyright (C) 2014 Joshua I. Sanders, Cold Spring Harbor Laboratory, NY, USA
-
+Modified by Jeffrey Erlich 2015
 ----------------------------------------------------------------------------
 
 This program is free software: you can redistribute it and/or modify
@@ -17,16 +17,23 @@ See the GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 %}
-function PsychToolboxSoundServer(Function, varargin)
+function y=PsychToolboxSoundServer(Function, varargin)
 % Note: On some Ubuntu systems with Xonar DX, L&R audio seem to be remapped
 % to the third plug on the card (from the second plug where they're
 % supposed to be). A modified version of this plugin for those systems is
 % available upon request. -JS 8/27/2014
 global BpodSystem
-SF = 192000; % Sound card sampling rate
+persistent SF;
+if isempty(SF)
+    SF = 192000; % Sound card sampling rate
+end
 nSlaves = 32;
 Function = lower(Function);
 switch Function
+    case 'getsf'
+        y = SF;       
+    case 'setsf'
+        SF = varargin{1};      
     case 'init'
         if BpodSystem.EmulatorMode == 0
             if ~isfield(BpodSystem.SystemSettings, 'SoundDeviceID')

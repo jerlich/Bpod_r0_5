@@ -159,6 +159,8 @@ while BpodSystem.InStateMatrix
             case 2 % Soft-code
                 SoftCode = opCodeBytes(2);
                 HandleSoftCode(SoftCode);
+            case 3
+                fprintf('case 3 %d\n' , opCodeBytes(2))
             otherwise
                 disp('Error: Invalid op code received')
         end
